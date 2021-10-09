@@ -1,6 +1,6 @@
 use std::{env, io};
 
-use tokio::net::TcpListener;
+use tokio::{io::AsyncWriteExt, net::TcpListener};
 
 #[tokio::main]
 pub async fn main() -> Result<(), io::Error> {
@@ -11,6 +11,10 @@ pub async fn main() -> Result<(), io::Error> {
 
     loop {
         // Asynchronously wait for an inbound TcpStream.
-        let (stream, addr) = listener.accept().await?;
+        let (mut stream, _) = listener.accept().await?;
+        match stream.write(b"Amirreza says hello").await {
+            Ok(_) => {}
+            Err(err) => println!("err in writing: {}", err),
+        }
     }
 }
