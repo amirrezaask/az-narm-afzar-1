@@ -22,19 +22,30 @@ pub async fn main() -> Result<(), io::Error> {
     let store = Store(Arc::new(RwLock::new(hm)));
 
     loop {
-        let this_store = Store(store.0.clone());
+        let mut this_store = Store(store.0.clone());
 
         // Asynchronously wait for an inbound TcpStream.
         let (mut stream, _) = listener.accept().await?;
-        let mut buf: Vec<u8> = Vec::new();
-        stream.read_to_end(&mut buf).await?;
-        let mut cmd: String = String::from_utf8(buf).unwrap();
-        let mut cmd = cmd.split(" ");
-        if let Some(base_cmd) = cmd.nth(0) {
-            if let Some(primary_arg) = cmd.nth(0) {
-                if let Some(sec_arg) = cmd.nth(0) {}
+        tokio::spawn(async move {
+            let mut buf: Vec<u8> = Vec::new();
+            stream.read_to_end(&mut buf).await.unwrap();
+            let mut cmd: String = String::from_utf8(buf).unwrap();
+            let mut cmd = cmd.split(" ");
+            let base_cmd = cmd.nth(0).unwrap();
+
+            let primary_arg = cmd.nth(0).unwrap();
+            if base_cmd == "set" {
+                let value_arg = cmd.nth(0).unwrap();
+                this_store
+                    .set(primary_arg.to_string(), value_arg.to_string())
+                    .await
+                    .unwrap();
+                stream.write(b"SUCCESS").await;
+            } else if base_cmd == "get" {
+                let value = this_store.get(primary_arg.to_string()).await.unwrap();
+                stream.write(value.as_bytes()).await;
             }
-        }
+        });
     }
 }
 struct Store<K, V>(Arc<RwLock<HashMap<K, V>>>)
@@ -56,10 +67,7 @@ where
         s.insert(key, value);
         Ok(())
     }
-    async fn get<I>(&self, pattern: K) -> Result<V, String>
-    where
-        I: Iterator<Item = V>,
-    {
+    async fn get(&self, pattern: K) -> Result<V, String> {
         let s = self.0.read();
         match s {
             Ok(s) => {
