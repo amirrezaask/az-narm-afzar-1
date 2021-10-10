@@ -9,7 +9,7 @@ use std::{
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
+    net::TcpListener,
 };
 
 async fn read_till_char<T: AsyncReadExt + std::marker::Unpin>(stream: &mut T, c: char) -> String {
@@ -42,22 +42,31 @@ pub async fn main() -> Result<(), io::Error> {
         let (mut stream, _) = listener.accept().await?;
         tokio::spawn(async move {
             loop {
-                let base_cmd = read_till_char(&mut stream, ' ').await;
-                let primary_arg = read_till_char(&mut stream, ' ').await;
+                println!("listening");
+                let cmd = read_till_char(&mut stream, '\n').await;
+                let mut cmd = cmd.split(" ");
+                // let base_cmd = read_till_char(&mut stream, ' ').await;
+                // let primary_arg = read_till_char(&mut stream, ' ').await;
+                let base_cmd = cmd.nth(0).unwrap();
+                let primary_arg = cmd.nth(0).unwrap();
+                println!("base: '{}' arg1:'{}'", base_cmd, primary_arg);
                 if base_cmd == "set" {
-                    let value_arg = read_till_char(&mut stream, '\n').await;
+                    let value_arg = cmd.nth(0).unwrap();
                     println!("{}", value_arg);
                     this_store
                         .set(primary_arg.to_string(), value_arg.to_string())
                         .await
                         .unwrap();
-                    stream.write(b"SUCCESS").await;
+                    stream.write(b"SUCCESS\n").await.unwrap();
                     continue;
                 } else if base_cmd == "get" {
                     println!("get handler");
-                    let value = this_store.get(primary_arg.to_string()).await.unwrap();
+                    let value = this_store
+                        .get(primary_arg.to_string().trim_end().to_string())
+                        .await
+                        .unwrap();
                     println!("got value {}", value);
-                    stream.write(value.as_bytes()).await;
+                    stream.write(value.as_bytes()).await.unwrap();
                     continue;
                 }
             }
