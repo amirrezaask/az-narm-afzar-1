@@ -11,7 +11,21 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
 };
-fn read_till_char(stream: &TcpStream, c: u8) -> String {}
+
+async fn read_till_char<T: AsyncReadExt + std::marker::Unpin>(stream: &mut T, c: char) -> String {
+    let mut buf = [0; 1];
+    let mut output = String::new();
+    loop {
+        stream.read(&mut buf).await.unwrap();
+        let buf_char = char::from(buf[0]);
+        if buf_char == c {
+            break;
+        }
+        output.push(buf_char)
+    }
+    output
+}
+
 #[tokio::main]
 pub async fn main() -> Result<(), io::Error> {
     let addr = env::args()
@@ -27,25 +41,25 @@ pub async fn main() -> Result<(), io::Error> {
         // Asynchronously wait for an inbound TcpStream.
         let (mut stream, _) = listener.accept().await?;
         tokio::spawn(async move {
-            let mut buf = [0; 1024];
-
-            stream.read(&mut buf).await.unwrap();
-            let mut cmd: String = String::from_utf8_lossy(&buf[..]).to_string();
-            println!("Request => {}", cmd);
-            let mut cmd = cmd.split(" ");
-            let base_cmd = cmd.nth(0).unwrap();
-
-            let primary_arg = cmd.nth(0).unwrap();
-            if base_cmd == "set" {
-                let value_arg = cmd.nth(0).unwrap();
-                this_store
-                    .set(primary_arg.to_string(), value_arg.to_string())
-                    .await
-                    .unwrap();
-                stream.write(b"SUCCESS").await;
-            } else if base_cmd == "get" {
-                let value = this_store.get(primary_arg.to_string()).await.unwrap();
-                stream.write(value.as_bytes()).await;
+            loop {
+                let base_cmd = read_till_char(&mut stream, ' ').await;
+                let primary_arg = read_till_char(&mut stream, ' ').await;
+                if base_cmd == "set" {
+                    let value_arg = read_till_char(&mut stream, '\n').await;
+                    println!("{}", value_arg);
+                    this_store
+                        .set(primary_arg.to_string(), value_arg.to_string())
+                        .await
+                        .unwrap();
+                    stream.write(b"SUCCESS").await;
+                    continue;
+                } else if base_cmd == "get" {
+                    println!("get handler");
+                    let value = this_store.get(primary_arg.to_string()).await.unwrap();
+                    println!("got value {}", value);
+                    stream.write(value.as_bytes()).await;
+                    continue;
+                }
             }
         });
     }
@@ -82,4 +96,10 @@ where
             Err(err) => return Err("".to_string()),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_read_till_char() {}
 }
