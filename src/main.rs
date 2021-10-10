@@ -9,9 +9,9 @@ use std::{
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
 };
-
+fn read_till_char(stream: &TcpStream, c: u8) -> String {}
 #[tokio::main]
 pub async fn main() -> Result<(), io::Error> {
     let addr = env::args()
@@ -27,9 +27,11 @@ pub async fn main() -> Result<(), io::Error> {
         // Asynchronously wait for an inbound TcpStream.
         let (mut stream, _) = listener.accept().await?;
         tokio::spawn(async move {
-            let mut buf: Vec<u8> = Vec::new();
-            stream.read_to_end(&mut buf).await.unwrap();
-            let mut cmd: String = String::from_utf8(buf).unwrap();
+            let mut buf = [0; 1024];
+
+            stream.read(&mut buf).await.unwrap();
+            let mut cmd: String = String::from_utf8_lossy(&buf[..]).to_string();
+            println!("Request => {}", cmd);
             let mut cmd = cmd.split(" ");
             let base_cmd = cmd.nth(0).unwrap();
 
