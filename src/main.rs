@@ -45,8 +45,6 @@ pub async fn main() -> Result<(), io::Error> {
                 println!("listening");
                 let cmd = read_till_char(&mut stream, '\n').await;
                 let mut cmd = cmd.split(" ");
-                // let base_cmd = read_till_char(&mut stream, ' ').await;
-                // let primary_arg = read_till_char(&mut stream, ' ').await;
                 let base_cmd = cmd.nth(0).unwrap();
                 let primary_arg = cmd.nth(0).unwrap();
                 println!("base: '{}' arg1:'{}'", base_cmd, primary_arg);
