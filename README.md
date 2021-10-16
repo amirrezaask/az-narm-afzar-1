@@ -6,3 +6,5 @@ cargo r
 # in another session
 telnet localhost 6142
 ```
+# Credits
+- Rustlang team for amazing programming language
