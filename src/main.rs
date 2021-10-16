@@ -42,7 +42,7 @@ pub async fn main() -> Result<(), io::Error> {
         let (mut stream, _) = listener.accept().await?;
         tokio::spawn(async move {
             loop {
-                println!("listening for new connection");
+                println!("waiting for a new cmd...");
                 let cmd = read_till_char(&mut stream, '\n').await;
                 let mut cmd = cmd.split(" ");
                 let base_cmd = cmd.nth(0).unwrap();
