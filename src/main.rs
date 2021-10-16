@@ -47,7 +47,7 @@ pub async fn main() -> Result<(), io::Error> {
                 let mut cmd = cmd.split(" ");
                 let base_cmd = cmd.nth(0).unwrap();
                 let primary_arg = cmd.nth(0).unwrap();
-                println!("base: '{}' arg1:'{}'", base_cmd, primary_arg);
+                println!("base part: '{}' first argument:'{}'", base_cmd, primary_arg);
                 if base_cmd == "set" {
                     let value_arg = cmd.nth(0).unwrap();
                     println!("{}", value_arg);
